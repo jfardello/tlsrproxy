@@ -18,16 +18,30 @@ A body-rewriting (hijacking) golang reverse proxy.
 Setting up a proxy to httpbin.org and post a json.
 
 ```
-$ mkdir sample && cd sample
-$ openssl req -subj '/CN=dsc.127.0.0.1.nip.io/O=dsc/C=ES' -new -newkey rsa:2048 -sha256 -days 365 \
-   -nodes -x509 -keyout server.key -out server.crt
-
-$ docker run -e -e UPSTREAM=https://httpbin.org -it --rm -p 8443:8443 quay.io/jfardello/tlsrproxy:latest
-
+$ docker run -it --rm -e UPSTREAM=https://httpbin.org quai.io/jfardello/tlsrproxy
 ```
 #On another terminal..
 ```
 #it should change "http://" for "https://"
-$ curl -H 'X-foo: http://pepe' http://localhost:8888/anything/foo
+$ $curl -H 'X-foo: http://pepe' http://localhost:8888/anything/foo
+{
+  "args": {}, 
+  "data": "", 
+  "files": {}, 
+  "form": {}, 
+  "headers": {
+    "Accept": "*/*", 
+    "Accept-Encoding": "gzip", 
+    "Host": "httpbin.org", 
+    "User-Agent": "curl/7.69.1", 
+    "X-Amzn-Trace-Id": "Root=1-5fe07d1d-2fb61c05572f65ce45bdf472", 
+    "X-Foo": "https://pepe"
+  }, 
+  "json": null, 
+  "method": "GET", 
+  "origin": "127.0.0.1, 88.24.169.196", 
+  "url": "https://httpbin.org/anything/foo"
+}
+
 ```
 
