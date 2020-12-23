@@ -21,6 +21,7 @@ ENV DSC_HTTP_DRAIN_INTERVAL 1s
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /usr/local/bin/tlsrproxy /usr/local/bin/tlsrproxy
+COPY tlsrproxy.yaml /config/tlsrproxy.yaml
 USER appuser
 
 EXPOSE 8888

@@ -3,14 +3,13 @@ package handlers
 import (
 	"net/http"
 	"net/http/httputil"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	errorForbidden = StatusError{403, errors.New("bad dscv")}
+	errorForbidden = StatusError{403, errors.New("not allowed")}
 )
 
 // Error represents a handler error. It provides methods for a HTTP status
@@ -38,9 +37,8 @@ func (se StatusError) Status() int {
 
 // Env represents options always present in handlers.
 type Env struct {
-	Proxy        *httputil.ReverseProxy
-	Log          *logrus.Logger
-	CustomHeader string
+	Proxy *httputil.ReverseProxy
+	Log   *logrus.Logger
 }
 
 // Handler is a wrapper to satisfy http.Handler and to pass around an *Env context.
@@ -81,10 +79,6 @@ func Status(env *Env, w http.ResponseWriter, r *http.Request) error {
 
 // ProxyHandler sends http requests to upstream.
 func ProxyHandler(env *Env, w http.ResponseWriter, r *http.Request) error {
-	if env.CustomHeader != "" {
-		values := strings.Split(env.CustomHeader, ":")
-		r.Header.Add(values[0], values[1])
-	}
 	env.Log.WithFields(logrus.Fields{"path": r.URL}).Info("Forwarding url to upstream.")
 	env.Proxy.ServeHTTP(w, r)
 	return nil

@@ -13,30 +13,31 @@ import (
 	"github.com/jfardello/tlsrproxy/application"
 )
 
+//ConfigFileName is the default config for the rewriting proxy.
+var ConfigFileName string = "tlsrproxy"
+
 func newConfig() (*viper.Viper, error) {
 	c := viper.New()
-	c.SetDefault("http_addr", ":8888")
-	c.SetDefault("upstream", "http://localhost:8080")
-	c.SetDefault("http_cert_file", "")
-	c.SetDefault("http_key_file", "")
-	c.SetDefault("http_drain_interval", "1s")
-	c.SetDefault("custom_header", nil)
-
+	c.SetDefault("server.http_addr", ":8888")
+	c.SetDefault("proxy.upstream", "http://localhost:8080")
+	c.SetDefault("server.cert", "")
+	c.SetDefault("server.key", "")
+	c.SetDefault("server.drain", "1s")
+	c.SetDefault("proxy.bodyreplaces", [][]string{
+		[]string{"http://", "https://"},
+		[]string{"foo", "bar"},
+	})
+	c.SetDefault("proxy.headersreplaces", [][]string{
+		[]string{"http://", "https://"},
+		[]string{"foo", "bar"},
+	})
+	c.SetConfigName(ConfigFileName)
+	c.AddConfigPath(".")
+	c.AddConfigPath("/config")
 	c.AutomaticEnv()
-	return c, nil
-}
-
-func originValidator(origin string) bool {
-	config, err := newConfig()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	for _, b := range strings.Split(config.GetString("cors_origins_allowed"), ",") {
-		if b == origin {
-			return true
-		}
-	}
-	return false
+	c.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	err := c.ReadInConfig()
+	return c, err
 }
 
 func main() {
@@ -55,11 +56,11 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	serverAddress := config.Get("http_addr").(string)
+	serverAddress := config.Get("server.http_addr").(string)
 
-	certFile := config.Get("http_cert_file").(string)
-	keyFile := config.Get("http_key_file").(string)
-	drainIntervalString := config.Get("http_drain_interval").(string)
+	certFile := config.Get("server.cert").(string)
+	keyFile := config.Get("server.key").(string)
+	drainIntervalString := config.Get("server.drain").(string)
 
 	drainInterval, err := time.ParseDuration(drainIntervalString)
 	if err != nil {
@@ -73,6 +74,7 @@ func main() {
 	}
 
 	logrus.Infoln("Running HTTP server on " + serverAddress)
+	logrus.Infoln("Forwarding to upstream on " + config.GetString("proxy.upstream"))
 
 	if certFile != "" && keyFile != "" {
 		fmt.Println("Serving with TLS enabled")

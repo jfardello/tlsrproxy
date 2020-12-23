@@ -18,7 +18,7 @@ A body-rewriting (hijacking) golang reverse proxy.
 Setting up a proxy to httpbin.org and post a json.
 
 ```
-$ docker run -it --rm -e UPSTREAM=https://httpbin.org quai.io/jfardello/tlsrproxy
+$ docker run -it --rm -e PROXY_UPSTREAM=https://httpbin.org quai.io/jfardello/tlsrproxy
 ```
 #On another terminal..
 ```
@@ -45,3 +45,10 @@ $ $curl -H 'X-foo: http://pepe' http://localhost:8888/anything/foo
 
 ```
 
+The default config should be overrided in a volume:
+
+```
+mkdir config
+docker run -it --rm --entrypoint cat quai.io/jfardello/tlsrproxy /config/tlsrproxy.yaml > /conf/tlsrproxy.yaml
+docker run -it --rm -v ./config:/config quai.io/jfardello/tlsrproxy
+```

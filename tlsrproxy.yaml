@@ -1,0 +1,16 @@
+server:
+  upstream: http://localhost:9090
+  cert: ""
+  key: ""
+  drain: 1s
+proxy:
+  bodyreplaces:
+  - http://
+    https:// 
+  - barbar
+    pepepeo  
+  headersreplaces:
+  - header1
+    header2 
+  - headerA
+    headerB  
