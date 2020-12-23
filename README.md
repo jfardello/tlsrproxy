@@ -3,15 +3,15 @@ A body-rewriting (hijacking) golang reverse proxy.
 
 ## Environment Variables for Configuration
 
-* **HTTP_ADDR:** The host and port. Default: `":8888"`
+* **SERVER_HTTP_ADDR:** The host and port. Default: `":8888"`
 
-* **HTTP_CERT_FILE:** Path to cert file. Default: `""`
+* **SERVER_CERT:** Path to cert file. Default: `""`
 
-* **HTTP_KEY_FILE:** Path to key file. Default: `""`
+* **CERT_KEY:** Path to key file. Default: `""`
 
-* **HTTP_DRAIN_INTERVAL:** How long application will wait to drain old requests before restarting. Default: `"1s"`
+* **SERVER_DRAIN:** How long application will wait to drain old requests before restarting. Default: `"1s"`
 
-* **UPSTREAM** Forward incoming requests to this host.
+* **PROXY_UPSTREAM** Forward incoming requests to this host.
 
 ## Example:
 
