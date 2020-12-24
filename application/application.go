@@ -17,23 +17,26 @@ import (
 	gorilla_mux "github.com/gorilla/mux"
 	"github.com/jfardello/tlsrproxy/handlers"
 	"github.com/jfardello/tlsrproxy/internal/bytereplacer"
+	"github.com/jfardello/tlsrproxy/internal/config"
+	"github.com/jfardello/tlsrproxy/libhttp"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 var lock = &sync.Mutex{}
 
 type responseHeadersTransport struct {
-	oldnew []string
+	oldnew        []string
+	requestOldnew []string
 }
 
 var (
-	bodyReplacer    *bytereplacer.Replacer
-	headersReplacer *strings.Replacer
+	bodyReplacer           *bytereplacer.Replacer = nil
+	headersReplacer        *strings.Replacer      = nil
+	headersRequestReplacer *strings.Replacer      = nil
 )
 
 //NewBodyReplacer return a body singleton replacer.
-func NewBodyReplacer(oldnew ...string) *bytereplacer.Replacer {
+func NewBodyReplacer(oldnew []string) *bytereplacer.Replacer {
 	lock.Lock()
 	defer lock.Unlock()
 	if bodyReplacer == nil {
@@ -43,7 +46,7 @@ func NewBodyReplacer(oldnew ...string) *bytereplacer.Replacer {
 }
 
 //NewHeaderReplacer return a body singleton replacer.
-func NewHeaderReplacer(oldnew ...string) *strings.Replacer {
+func NewHeaderReplacer(oldnew []string) *strings.Replacer {
 	lock.Lock()
 	defer lock.Unlock()
 	if headersReplacer == nil {
@@ -52,22 +55,37 @@ func NewHeaderReplacer(oldnew ...string) *strings.Replacer {
 	return headersReplacer
 }
 
+//NewHeaderRequestReplacer return a body singleton replacer.
+func NewHeaderRequestReplacer(oldnew []string) *strings.Replacer {
+	lock.Lock()
+	defer lock.Unlock()
+	if headersRequestReplacer == nil {
+		headersRequestReplacer = strings.NewReplacer(oldnew...)
+	}
+	return headersRequestReplacer
+}
+
 //RoudTrip is used to mangle headers.
 func (t responseHeadersTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	//headers we sent
+	reqRepl := NewHeaderRequestReplacer(t.requestOldnew)
+	for key := range r.Header {
+		r.Header.Set(key, reqRepl.Replace(r.Header.Get(key)))
+	}
 	resp, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
 		return nil, err
 	}
-	hr := NewHeaderReplacer(t.oldnew...)
+	hr := NewHeaderReplacer(t.oldnew)
+	//Headers we get back from upstream
 	for key := range resp.Header {
 		resp.Header.Set(key, hr.Replace(resp.Header.Get(key)))
 	}
-
 	return resp, nil
 }
 
 // New is the constructor for Application struct.
-func New(config *viper.Viper) (*Application, error) {
+func New(config *config.Conf) (*Application, error) {
 	app := &Application{}
 	app.config = config
 	return app, nil
@@ -75,7 +93,7 @@ func New(config *viper.Viper) (*Application, error) {
 
 // Application is the application object that runs HTTP server.
 type Application struct {
-	config *viper.Viper
+	config *config.Conf
 }
 
 //MiddlewareStruct helps embed stuff into the real handlers.
@@ -85,22 +103,16 @@ func (app *Application) MiddlewareStruct() (*interpose.Middleware, error) {
 	return middle, nil
 }
 
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
-}
-
 //UpdateResponse replaces the body pf a request with a modifyed one, golang cannot modify inplace the body.
 func UpdateResponse(r *http.Response) error {
 	b, _ := ioutil.ReadAll(r.Body)
-	br := NewBodyReplacer("foo", "FoOo")
+	c, _ := config.GetConf()
+	args, err := libhttp.ToSlice(c.Proxy.BodyReplaces)
+	if err != nil {
+		logrus.Errorf("To slice failed: %s", err)
+		return err
+	}
+	br := NewBodyReplacer(args)
 	replace := br.Replace(b)
 	buf := bytes.NewBuffer(replace)
 	r.Body = ioutil.NopCloser(buf)
@@ -109,16 +121,25 @@ func UpdateResponse(r *http.Response) error {
 }
 
 //NewProxy returns a configured httputil.ReverseProxy
-func NewProxy(u *url.URL) *httputil.ReverseProxy {
+func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
+	c, _ := config.GetConf()
 	targetQuery := u.RawQuery
-	RemoveHeaders := responseHeadersTransport{oldnew: []string{"header1", "header2"}}
+	args, err := libhttp.ToSlice(c.Proxy.HeadersReplaces)
+	if err != nil {
+		return nil, err
+	}
+	ra, err := libhttp.ToSlice(c.Proxy.HeadersRequestReplaces)
+	RemoveHeaders := responseHeadersTransport{oldnew: args, requestOldnew: ra}
+	if err != nil {
+		return nil, err
+	}
 
 	return &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			req.Host = u.Host
 			req.URL.Scheme = u.Scheme
 			req.URL.Host = u.Host
-			req.URL.Path = singleJoiningSlash(u.Path, req.URL.Path)
+			req.URL.Path = libhttp.SingleJoiningSlash(u.Path, req.URL.Path)
 			if targetQuery == "" || req.URL.RawQuery == "" {
 				req.URL.RawQuery = targetQuery + req.URL.RawQuery
 
@@ -128,7 +149,7 @@ func NewProxy(u *url.URL) *httputil.ReverseProxy {
 		},
 		Transport:      RemoveHeaders,
 		ModifyResponse: UpdateResponse,
-	}
+	}, nil
 }
 
 func newPool(addr string) *redis.Pool {
@@ -142,7 +163,7 @@ func newPool(addr string) *redis.Pool {
 func (app *Application) mux() *gorilla_mux.Router {
 
 	router := gorilla_mux.NewRouter()
-	u, err := url.Parse(app.config.GetString("proxy.upstream"))
+	u, err := url.Parse(app.config.Proxy.Upstream)
 
 	env := handlers.Env{
 		Log: &logrus.Logger{
@@ -154,7 +175,10 @@ func (app *Application) mux() *gorilla_mux.Router {
 		},
 	}
 	if err == nil {
-		env.Proxy = NewProxy(u)
+		env.Proxy, err = NewProxy(u)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	router.Handle("/_health/status", handlers.Handler{Env: &env, H: handlers.Status})

@@ -4,13 +4,20 @@ server:
   drain: 1s
 proxy:
   upstream: http://localhost:9090
+  #Replaces body strings we get from upstream.
   bodyreplaces:
-  - http://
-    https:// 
-  - barbar
-    pepepeo  
+  - - http://
+    - https:// 
+  - - barbar
+    - pepepeo  
+  #Replaces the headers we get back.  
   headersreplaces:
-  - header1
-    header2 
-  - headerA
-    headerB  
+  - - header1
+    - header2
+  - - headerA
+    - headerB
+  #Replaces the headers we send.  
+  headerreqreplaces:
+  - - bart
+    - bert
+
