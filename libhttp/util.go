@@ -27,3 +27,13 @@ func ToSlice(in [][]string) ([]string, error) {
 	}
 	return out, nil
 }
+
+//Contains looks for string in a []string slice.
+func Contains(s []string, what string) bool {
+	for _, a := range s {
+		if a == what {
+			return true
+		}
+	}
+	return false
+}

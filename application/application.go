@@ -105,9 +105,13 @@ func (app *Application) MiddlewareStruct() (*interpose.Middleware, error) {
 
 //UpdateResponse replaces the body pf a request with a modifyed one, golang cannot modify inplace the body.
 func UpdateResponse(r *http.Response) error {
-	b, _ := ioutil.ReadAll(r.Body)
 	c, _ := config.GetConf()
-	args, err := libhttp.ToSlice(c.Proxy.BodyReplaces)
+	if validateMime(r, c) == false {
+		logrus.Info("HERE")
+		return nil
+	}
+	b, _ := ioutil.ReadAll(r.Body)
+	args, err := c.Proxy.Replaces.Response.Body.Flattern()
 	if err != nil {
 		logrus.Errorf("To slice failed: %s", err)
 		return err
@@ -120,16 +124,25 @@ func UpdateResponse(r *http.Response) error {
 	return nil
 }
 
+func validateMime(r *http.Response, c *config.Conf) bool {
+	ct := r.Header.Get("Content-Type")
+	if ct == "" {
+		return false
+	}
+	return libhttp.Contains(c.Proxy.Replaces.Response.Mimes, ct)
+
+}
+
 //NewProxy returns a configured httputil.ReverseProxy
 func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
 	c, _ := config.GetConf()
 	targetQuery := u.RawQuery
-	args, err := libhttp.ToSlice(c.Proxy.HeadersReplaces)
+	args, err := c.Proxy.Replaces.Response.Headers.Flatttern()
 	if err != nil {
 		return nil, err
 	}
-	ra, err := libhttp.ToSlice(c.Proxy.HeadersRequestReplaces)
-	RemoveHeaders := responseHeadersTransport{oldnew: args, requestOldnew: ra}
+	ra, err := c.Proxy.Replaces.Request.Headers.Flatttern()
+	transport := responseHeadersTransport{oldnew: args, requestOldnew: ra}
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +160,7 @@ func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
 				req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 			}
 		},
-		Transport:      RemoveHeaders,
+		Transport:      transport,
 		ModifyResponse: UpdateResponse,
 	}, nil
 }

@@ -5,19 +5,25 @@ server:
 proxy:
   upstream: http://localhost:9090
   #Replaces body strings we get from upstream.
-  bodyreplaces:
-  - - http://
-    - https:// 
-  - - barbar
-    - pepepeo  
-  #Replaces the headers we get back.  
-  headersreplaces:
-  - - header1
-    - header2
-  - - headerA
-    - headerB
-  #Replaces the headers we send.  
-  headerreqreplaces:
-  - - bart
-    - bert
-
+  replaces:
+    request: #Replaces the headers we send.
+      headers: 
+        - - bart
+          - bert
+    response: #Replaces the content in the response.
+      mimes: #Only deal with this types (Dont break downloads or othe content.)
+      - text/html
+      - text/css
+      - application/javascript
+      - application/json
+      - application/xhtml+xml
+      body:
+        - - http://
+          - https://
+        - - barbar
+          - pepepeo
+      headers:
+        - - header1
+          - header2
+        - - headerA
+          - headerB

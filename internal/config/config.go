@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/jfardello/tlsrproxy/libhttp"
+
 	"github.com/spf13/viper"
 )
 
@@ -35,10 +37,37 @@ type Server struct {
 }
 
 type Proxy struct {
-	Upstream               string     `mapstructure:"upstream"`
-	BodyReplaces           [][]string `mapstructure:"bodyreplaces"`
-	HeadersReplaces        [][]string `mapstructure:"headersreplaces"`
-	HeadersRequestReplaces [][]string `mapstructure:"headersreqreplaces"`
+	Upstream string   `mapstructure:"upstream"`
+	Mimes    []string `mapstructure:"mimes"`
+	Replaces Replaces
+}
+
+type Replaces struct {
+	Request Request
+	Response
+}
+
+type Request struct {
+	Headers Headers
+}
+
+type Response struct {
+	Headers Headers  `mapstructure:"headers"`
+	Body    Body     `mapstructure:"body"`
+	Mimes   []string `mapstructure:"mimes"`
+}
+
+type Headers PairList
+type Body PairList
+
+type PairList [][]string
+
+func (h *Headers) Flatttern() ([]string, error) {
+	return libhttp.ToSlice(*h)
+}
+
+func (b *Body) Flattern() ([]string, error) {
+	return libhttp.ToSlice(*b)
 }
 
 type Conf struct {
