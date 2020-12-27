@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jfardello/tlsrproxy/libhttp"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 )
@@ -17,7 +18,7 @@ func init() {
 	var err error
 	conf, err = newConfig()
 	if err != nil {
-		panic(err)
+		logrus.Info("No config file found, using defaults.")
 	}
 }
 
@@ -82,14 +83,15 @@ func newConfig() (*Conf, error) {
 	c.SetDefault("server.cert", "")
 	c.SetDefault("server.key", "")
 	c.SetDefault("server.drain", "1s")
-	c.SetDefault("proxy.bodyreplaces", [][]string{
+	c.SetDefault("proxy.replaces.response.body", [][]string{
 		{"http://", "https://"},
 		{"foo", "bar"},
 	})
-	c.SetDefault("proxy.headersreplaces", [][]string{
-		{"http://", "https://"},
+	c.SetDefault("proxy.replaces.response.headers", [][]string{
+		{"bart", "bert"},
 		{"foo", "bar"},
 	})
+	c.SetDefault("proxy.replaces.response.mimes", []string{"text/html"})
 	c.SetConfigName(ConfigFileName)
 	c.AddConfigPath("/config")
 	c.AddConfigPath(".")

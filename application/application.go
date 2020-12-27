@@ -107,7 +107,6 @@ func (app *Application) MiddlewareStruct() (*interpose.Middleware, error) {
 func UpdateResponse(r *http.Response) error {
 	c, _ := config.GetConf()
 	if validateMime(r, c) == false {
-		logrus.Info("HERE")
 		return nil
 	}
 	b, _ := ioutil.ReadAll(r.Body)

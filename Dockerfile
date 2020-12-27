@@ -16,8 +16,6 @@ RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /usr/local/bin/tlsrprox
 FROM alpine
 
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-ENV DSC_HTTP_ADDR :8888
-ENV DSC_HTTP_DRAIN_INTERVAL 1s
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /usr/local/bin/tlsrproxy /usr/local/bin/tlsrproxy
