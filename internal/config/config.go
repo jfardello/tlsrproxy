@@ -91,6 +91,7 @@ func newConfig() (*Conf, error) {
 		{"bart", "bert"},
 		{"foo", "bar"},
 	})
+	c.SetDefault("proxy.replaces.request.headers", [][]string{{"wolololo", "walalala"}})
 	c.SetDefault("proxy.replaces.response.mimes", []string{"text/html"})
 	c.SetConfigName(ConfigFileName)
 	c.AddConfigPath("/config")

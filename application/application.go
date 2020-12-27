@@ -10,10 +10,8 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/carbocation/interpose"
-	"github.com/gomodule/redigo/redis"
 	gorilla_mux "github.com/gorilla/mux"
 	"github.com/jfardello/tlsrproxy/handlers"
 	"github.com/jfardello/tlsrproxy/internal/bytereplacer"
@@ -162,14 +160,6 @@ func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
 		Transport:      transport,
 		ModifyResponse: UpdateResponse,
 	}, nil
-}
-
-func newPool(addr string) *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
-		Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", addr) },
-	}
 }
 
 func (app *Application) mux() *gorilla_mux.Router {
