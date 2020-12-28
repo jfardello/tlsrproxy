@@ -43,6 +43,13 @@ func NewBodyReplacer(oldnew []string) *bytereplacer.Replacer {
 	return bodyReplacer
 }
 
+//ResetReplacers is used mainly in unit tests.
+func ResetReplacers() {
+	bodyReplacer = nil
+	headersReplacer = nil
+	headersRequestReplacer = nil
+}
+
 //NewHeaderReplacer return a body singleton replacer.
 func NewHeaderReplacer(oldnew []string) *strings.Replacer {
 	lock.Lock()
@@ -108,11 +115,7 @@ func UpdateResponse(r *http.Response) error {
 		return nil
 	}
 	b, _ := ioutil.ReadAll(r.Body)
-	args, err := c.Proxy.Replaces.Response.Body.Flattern()
-	if err != nil {
-		logrus.Errorf("To slice failed: %s", err)
-		return err
-	}
+	args := c.Proxy.Replaces.Response.Body.Flattern()
 	br := NewBodyReplacer(args)
 	replace := br.Replace(b)
 	buf := bytes.NewBuffer(replace)
@@ -131,18 +134,12 @@ func validateMime(r *http.Response, c *config.Conf) bool {
 }
 
 //NewProxy returns a configured httputil.ReverseProxy
-func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
+func NewProxy(u *url.URL) *httputil.ReverseProxy {
 	c, _ := config.GetConf()
 	targetQuery := u.RawQuery
-	args, err := c.Proxy.Replaces.Response.Headers.Flatttern()
-	if err != nil {
-		return nil, err
-	}
-	ra, err := c.Proxy.Replaces.Request.Headers.Flatttern()
+	args := c.Proxy.Replaces.Response.Headers.Flatttern()
+	ra := c.Proxy.Replaces.Request.Headers.Flatttern()
 	transport := responseHeadersTransport{oldnew: args, requestOldnew: ra}
-	if err != nil {
-		return nil, err
-	}
 
 	return &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
@@ -159,7 +156,7 @@ func NewProxy(u *url.URL) (*httputil.ReverseProxy, error) {
 		},
 		Transport:      transport,
 		ModifyResponse: UpdateResponse,
-	}, nil
+	}
 }
 
 func (app *Application) mux() *gorilla_mux.Router {
@@ -177,10 +174,7 @@ func (app *Application) mux() *gorilla_mux.Router {
 		},
 	}
 	if err == nil {
-		env.Proxy, err = NewProxy(u)
-		if err != nil {
-			logrus.Fatal(err)
-		}
+		env.Proxy = NewProxy(u)
 	}
 
 	router.Handle("/_health/status", handlers.Handler{Env: &env, H: handlers.Status})

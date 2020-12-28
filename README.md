@@ -26,12 +26,25 @@ variaboles.
 Setting up a proxy to httpbin.org and post a json.
 
 ```
-$ docker run -it --rm -e PROXY_UPSTREAM=https://httpbin.org quai.io/jfardello/tlsrproxy
+$ docker run -it --rm -e PROXY_UPSTREAM=https://httpbin.org -p8888:8888 quay.io/jfardello/tlsrproxy:latest
+INFO[0000] Running HTTP server on :8888                 
+INFO[0000] Forwarding to upstream on https://httpbin.org 
+Warning! Serving clear text http!
 ```
-## On another terminal..
+## On another terminal.. 
+
+(it should change "http://" for "https://")
+
 ```
-#it should change "http://" for "https://"
-$ $curl -H 'X-foo: http://pepe' http://localhost:8888/anything/foo
+$curl -i  -H 'X-foo: bart' http://localhost:8888/anything/barbar/barbar
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: *
+Content-Length: 424
+Content-Type: application/json
+Date: Mon, 28 Dec 2020 20:57:13 GMT
+Server: gunicorn/19.9.0
+
 {
   "args": {}, 
   "data": "", 
@@ -42,26 +55,30 @@ $ $curl -H 'X-foo: http://pepe' http://localhost:8888/anything/foo
     "Accept-Encoding": "gzip", 
     "Host": "httpbin.org", 
     "User-Agent": "curl/7.69.1", 
-    "X-Amzn-Trace-Id": "Root=1-5fe07d1d-2fb61c05572f65ce45bdf472", 
-    "X-Foo": "https://pepe"
+    "X-Amzn-Trace-Id": "Root=1-5fea46a9-5bc577145bbcc9195c73730d", 
+    "X-Foo": "bert"
   }, 
   "json": null, 
   "method": "GET", 
-  "origin": "127.0.0.1, 88.24.169.196", 
-  "url": "https://httpbin.org/anything/foo"
+  "origin": "127.0.0.1, 88.53.64.95", 
+  "url": "https://httpbin.org/anything/pepepeo/pepepeo"
 }
 
 ```
+## Customizing the default config file 
 
-The default config should be overrided in a volume:
+It should be overrided in a volume, to get the file from the image:
 
 ```
 mkdir config
-docker run -it --rm --entrypoint cat quai.io/jfardello/tlsrproxy /config/tlsrproxy.yaml > /conf/tlsrproxy.yaml
-docker run -it --rm -v ./config:/config quai.io/jfardello/tlsrproxy
+docker run -it --rm --entrypoint cat quai.io/jfardello/tlsrproxy /config/tlsrproxy.yaml > /config/tlsrproxy.yaml
+```
+After editing `config/tlsrproxy.yaml` you can launch the same docker command with a volume (or attach a permanent one)
+```
+docker run -it --rm -v ./config:/config -e PROXY_UPSTREAM=https://httpbin.org -p8888:8888 quay.io/jfardello/tlsrproxy:latest
 ```
 
-## Config file
+## Default config file
 
 ```yaml
 server:

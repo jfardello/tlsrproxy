@@ -18,14 +18,14 @@ func SingleJoiningSlash(a, b string) string {
 }
 
 //ToSlice converts the replaces to a string slice.
-func ToSlice(in [][]string) ([]string, error) {
+func ToSlice(in [][]string) []string {
 	var out []string
 	for _, each := range in {
 		for _, elem := range each {
 			out = append(out, elem)
 		}
 	}
-	return out, nil
+	return out
 }
 
 //Contains looks for string in a []string slice.

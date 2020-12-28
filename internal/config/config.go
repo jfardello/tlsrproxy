@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/jfardello/tlsrproxy/libhttp"
 	"github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ import (
 //ConfigFileName is the default config for the rewriting proxy.
 var ConfigFileName string = "tlsrproxy"
 var conf *Conf
+var lock = &sync.Mutex{}
 
 func init() {
 	var err error
@@ -28,6 +30,14 @@ func GetConf() (*Conf, error) {
 		return nil, errors.New("Can't get config")
 	}
 	return conf, nil
+}
+
+//SetConf is used mainly in unit tests.
+func SetConf(c *Conf) error {
+	lock.Lock()
+	defer lock.Unlock()
+	conf = c
+	return nil
 }
 
 type Server struct {
@@ -63,11 +73,11 @@ type Body PairList
 
 type PairList [][]string
 
-func (h *Headers) Flatttern() ([]string, error) {
+func (h *Headers) Flatttern() []string {
 	return libhttp.ToSlice(*h)
 }
 
-func (b *Body) Flattern() ([]string, error) {
+func (b *Body) Flattern() []string {
 	return libhttp.ToSlice(*b)
 }
 
